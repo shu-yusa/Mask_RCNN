@@ -168,6 +168,52 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         plt.show()
 
 
+def save_masked_image(image, boxes, masks, class_ids, class_names,
+                      scores=None, title="",
+                      figsize=(16, 16), ax=None,
+                      show_mask=True, show_bbox=True,
+                      colors=None, captions=None, sequence=0, extract_class_id=1):
+    """
+    boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
+    masks: [height, width, num_instances]
+    class_ids: [num_instances]
+    class_names: list of class names of the dataset
+    scores: (optional) confidence scores for each box
+    title: (optional) Figure title
+    show_mask, show_bbox: To show masks and bounding boxes or not
+    figsize: (optional) the size of the image
+    colors: (optional) An array or colors to use with each object
+    captions: (optional) A list of strings to use as captions for each object
+    """
+    # Number of instances
+    N = boxes.shape[0]
+    if not N:
+        print("\n*** No instances to display *** \n")
+    else:
+        assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
+
+    # Show area outside image boundaries.
+    height, width = image.shape[:2]
+
+    masked_image = image.astype(np.uint32).copy()
+    person_mask = np.ma.make_mask(np.zeros((height, width)))
+    for i in range(N):
+        class_id = class_ids[i]
+        # if class_id is not 1:
+        #     # not person
+        #     continue
+
+        # Mask
+        if class_id == extract_class_id:
+            mask = masks[:, :, i]
+            person_mask = np.ma.mask_or(person_mask, mask)
+    for c in range(3):
+        masked_image[:, :, c] = np.where(person_mask == 1,
+                                  masked_image[:, :, c],
+                                  255)
+    return masked_image.astype(np.uint8)
+
+
 def display_differences(image,
                         gt_box, gt_class_id, gt_mask,
                         pred_box, pred_class_id, pred_score, pred_mask,
